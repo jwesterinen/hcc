@@ -1,0 +1,74 @@
+entry	foo	$$1
+	load	par	0		;	a
+	load	gbl	1		;	g
+	alu	-		;	-
+	store	par	1		;	b
+	pop			;	clear stack
+	load	par	1		;	b
+	jumpz	$$2		;	IF
+	load	par	0		;	a
+	store	gbl	0		;	save result
+	return			;	RETURN
+label	$$2
+	call	bar
+	load	gbl	0		;	push result
+	pop			;	clear stack
+	load	par	1		;	b
+	store	gbl	0		;	save result
+	return			;	RETURN
+	return			;	end of function
+equ	$$1	0		; foo
+entry	bar	$$3
+	load	con	7
+	store	gbl	1		;	g
+	pop			;	clear stack
+	return			;	end of function
+equ	$$3	0		; bar
+entry	main	$$4
+	load	con	1
+	load	con	2
+	call	foo
+	pop			;	pop argument
+	pop			;	pop argument
+	load	gbl	0		;	push result
+	store	lcl	0		;	x
+	pop			;	clear stack
+	load	lcl	0		;	x
+	load	con	3
+	alu	<=		;	<=
+	jumpz	$$5		;	IF
+	load	con	1
+	store	lcl	0		;	x
+	pop			;	clear stack
+	jump	$$6		;	past ELSE
+label	$$5
+	load	con	0
+	store	lcl	0		;	x
+	pop			;	clear stack
+label	$$6
+label	$$7
+	load	lcl	0		;	x
+	load	con	5
+	alu	<		;	<
+	jumpz	$$8		;	WHILE
+	dec	lcl	0		;	x
+	pop			;	clear stack
+	load	lcl	0		;	x
+	load	con	5
+	alu	>		;	>
+	jumpz	$$9		;	IF
+	jump	$$7		;	CONTINUE
+label	$$9
+	load	lcl	0		;	x
+	load	con	0
+	alu	==		;	==
+	jumpz	$$10		;	IF
+	jump	$$8		;	BREAK
+label	$$10
+	inc	lcl	0		;	x
+	pop			;	clear stack
+	jump	$$7		;	repeat WHILE
+label	$$8
+	return			;	end of function
+equ	$$4	2		; main
+	end			;	end of program

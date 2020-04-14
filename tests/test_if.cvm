@@ -1,0 +1,20 @@
+entry	main	_LP1
+	load	con	5
+	store	lcl	0		;	x
+	pop			;	clear stack
+	load	lcl	0		;	x
+	load	con	5
+	alu	==		;	==
+	jumpz	_LP2		;	IF
+	load	con	0
+	store	lcl	0		;	x
+	pop			;	clear stack
+	jump	_LP3		;	past ELSE
+_LP2
+	load	con	1
+	store	lcl	0		;	x
+	pop			;	clear stack
+_LP3
+	return			;	end of function
+equ	_LP1	1		; main
+	end			;	end of program

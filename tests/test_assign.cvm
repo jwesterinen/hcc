@@ -1,0 +1,7 @@
+entry	main	_LP1
+	load	con	5
+	store	lcl	0		;	x
+	pop			;	clear stack
+	return			;	end of function
+equ	_LP1	1		; main
+	end			;	end of program
