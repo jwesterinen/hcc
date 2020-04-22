@@ -318,15 +318,15 @@ binary
 	    {chk_func($1);}
 	  optional_argument_list rp/*')'*/
 	    {gen_call($1, $4);}
-	| Identifier PP
+	| PP Identifier
 	    {
-	        chk_var($1);
-	        gen(OP_INC, gen_mod($1), OFFSET($1), NAME($1));
+	        chk_var($2);
+	        gen(OP_INC, gen_mod($2), OFFSET($2), NAME($2));
 	    }
-	| Identifier MM
+	| MM Identifier
 	    {
-	        chk_var($1);
-	        gen(OP_DEC, gen_mod($1), OFFSET($1), NAME($1));
+	        chk_var($2);
+	        gen(OP_DEC, gen_mod($2), OFFSET($2), NAME($2));
 	    }
 	| binary '+' binary
 	    {gen_alu(ALU_ADD, "+");}
