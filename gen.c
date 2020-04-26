@@ -39,7 +39,7 @@ char *gen_mod(struct Symtab *symbol)
 
 void gen(const char *op, const char *mod, int val, const char *comment)
 {
-    printf("\t%s\t%s\t%d\t\t;\t%s\n", op, mod, val, comment);
+    printf("\t%s\t%s\t%d\t;\t%s\n", op, mod, val, comment);
 }
 
 void gen_expr(const char *op, const char *comment)
@@ -169,7 +169,7 @@ int gen_entry(struct Symtab *symbol)
 
 void fix_entry(struct Symtab *symbol, int label)
 {
-    printf("equ\t%s\t%d\t\t; %s\n", format_label(label), l_max, symbol->s_name);
+    printf("%s\tequ\t%d\t\t;\t%s\n", format_label(label), l_max, symbol->s_name);
 }
 
 void end_program()
