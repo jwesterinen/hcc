@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 #include "y.tab.h"
 
 extern FILE *yyerfp;
@@ -68,6 +69,11 @@ int cpp(int argc, char** argv)
  */
 int main(int argc, char** argv)
 {
+    // output file
+    extern FILE* yyout;
+    char *bname;
+    char outfileName[80];
+    
     // init the error stream
     //yyerfp = stdout;
     yyerfp = stderr;
@@ -77,6 +83,7 @@ int main(int argc, char** argv)
     //yydebug = 1;
 #endif
 
+    // TODO: change to using getopt()
     char** argp;
     int cppflag = 1;
     for (argp = argv; *++argp && **argp == '-'; )
@@ -102,6 +109,15 @@ int main(int argc, char** argv)
         perror(*argp), exit(1);
     if (cppflag && cpp(argc, argv))
         perror("C preprocessor"), exit(1);
+        
+    // open the output file as the input file with a .cvm extension
+    bname = basename(argv[1]);
+    //sscanf(bname, "%s.c", outfileName);
+    strcpy(outfileName, bname);
+    strcat(outfileName, "vm");
+    yyout = fopen(outfileName, "w");
+    
+    // run the parser
     exit(yyparse());
 }
 

@@ -8,6 +8,8 @@
 #include "symtab.h"
 #include "gen.h"
 
+extern FILE *yyout;
+
 static struct Bc_stack
 {
     int bc_label;               // label from new_label
@@ -17,12 +19,12 @@ static struct Bc_stack
   
 void gen_alu(const char *mod, const char *comment)
 {
-    printf("\t%s\t%s\t\t;\t%s\n", OP_ALU, mod, comment);
+    fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", OP_ALU, mod, comment);
 }
 
 void gen_load_immed(const char *constant)
 {
-    printf("\t%s\t%s\t%s\n", OP_LOAD, MOD_IMMED, constant);
+    fprintf(yyout, "\t%s\t%s\t%s\n", OP_LOAD, MOD_IMMED, constant);
 }
 
 char *gen_mod(struct Symtab *symbol)
@@ -39,12 +41,12 @@ char *gen_mod(struct Symtab *symbol)
 
 void gen(const char *op, const char *mod, int val, const char *comment)
 {
-    printf("\t%s\t%s\t%d\t;\t%s\n", op, mod, val, comment);
+    fprintf(yyout, "\t%s\t%s\t%d\t;\t%s\n", op, mod, val, comment);
 }
 
 void gen_expr(const char *op, const char *comment)
 {
-    printf("\t%s\t\t\t;\t%s\n", op, comment);
+    fprintf(yyout, "\t%s\t\t\t;\t%s\n", op, comment);
 }
 
 #define LABEL "_LP%d"
@@ -58,7 +60,7 @@ static char *format_label(int label)
 
 int gen_jump(const char *op, int label, const char *comment)
 {
-    printf("\t%s\t%s\t\t;\t%s\n", op, format_label(label), comment);
+    fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", op, format_label(label), comment);
     return label;
 }
 
@@ -70,8 +72,8 @@ int new_label()
 
 int gen_label(int label)
 {
-    //printf("%s\tequ\t*\n", format_label(label));
-    printf("label\t%s\n", format_label(label));
+    //fprintf(yyout, "%s\tequ\t*\n", format_label(label));
+    fprintf(yyout, "label\t%s\n", format_label(label));
     return label;
 }
 
@@ -150,8 +152,8 @@ void gen_continue()
 void gen_call(struct Symtab *symbol, int count)
 {
     chk_parm(symbol, count);
-    //printf("\t%s\t%d,%s\n", OP_CALL, count, symbol->s_name);
-    printf("\t%s\t%s\n", OP_CALL, symbol->s_name);
+    //fprintf(yyout, "\t%s\t%d,%s\n", OP_CALL, count, symbol->s_name);
+    fprintf(yyout, "\t%s\t%s\n", OP_CALL, symbol->s_name);
     while (count-- > 0)
         gen_expr(OP_POP, "pop argument");
     gen(OP_LOAD, MOD_GLOBAL, 0, "push result");
@@ -161,22 +163,22 @@ int gen_entry(struct Symtab *symbol)
 {
     int label = new_label();
     
-    //printf("%s\t", symbol->s_name);
-    //printf("%s\t%s\n", OP_ENTRY, format_label(label));
-    printf("%s\t%s\t%s\n", OP_ENTRY, symbol->s_name, format_label(label));
+    //fprintf(yyout, "%s\t", symbol->s_name);
+    //fprintf(yyout, "%s\t%s\n", OP_ENTRY, format_label(label));
+    fprintf(yyout, "%s\t%s\t%s\n", OP_ENTRY, symbol->s_name, format_label(label));
     return label;
 }
 
 void fix_entry(struct Symtab *symbol, int label)
 {
-    printf("%s\tequ\t%d\t\t;\t%s\n", format_label(label), l_max, symbol->s_name);
+    fprintf(yyout, "%s\tequ\t%d\t\t;\t%s\n", format_label(label), l_max, symbol->s_name);
 }
 
 void end_program()
 {
     // allocate global variables
     all_program();
-    //printf("\tend\t%d, main\n", g_offset);
+    //fprintf(yyout, "\tend\t%d, main\n", g_offset);
     gen_expr("end", "end of program");
 }
 
