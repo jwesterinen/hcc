@@ -7,8 +7,11 @@
 #include "message.h"
 #include "symtab.h"
 #include "gen.h"
+#include "gen_hack.h"
 
 extern FILE *yyout;
+extern int emitVmCode;
+extern int verbose;
 
 static struct Bc_stack
 {
@@ -17,16 +20,6 @@ static struct Bc_stack
 } *b_top,                       // head of break stack 
   *c_top;                       // head of continue stack
   
-void gen_alu(const char *mod, const char *comment)
-{
-    fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", OP_ALU, mod, comment);
-}
-
-void gen_load_immed(const char *constant)
-{
-    fprintf(yyout, "\t%s\t%s\t%s\n", OP_LOAD, MOD_IMMED, constant);
-}
-
 char *gen_mod(struct Symtab *symbol)
 {
     switch (symbol->s_blknum)
@@ -39,18 +32,7 @@ char *gen_mod(struct Symtab *symbol)
     return MOD_LOCAL;
 }
 
-void gen(const char *op, const char *mod, int val, const char *comment)
-{
-    fprintf(yyout, "\t%s\t%s\t%d\t;\t%s\n", op, mod, val, comment);
-}
-
-void gen_expr(const char *op, const char *comment)
-{
-    fprintf(yyout, "\t%s\t\t\t;\t%s\n", op, comment);
-}
-
 #define LABEL "_LP%d"
-
 static char *format_label(int label)
 {
     static char buffer[sizeof LABEL + 2];
@@ -58,23 +40,10 @@ static char *format_label(int label)
     return buffer;
 }
 
-int gen_jump(const char *op, int label, const char *comment)
-{
-    fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", op, format_label(label), comment);
-    return label;
-}
-
 int new_label()
 {
     static int next_label = 0;
     return ++next_label;
-}
-
-int gen_label(int label)
-{
-    //fprintf(yyout, "%s\tequ\t*\n", format_label(label));
-    fprintf(yyout, "label\t%s\n", format_label(label));
-    return label;
 }
 
 static struct Bc_stack *push(struct Bc_stack *stack, int label)
@@ -149,13 +118,121 @@ void gen_continue()
     gen_jump(OP_JUMP, top(c_top), "CONTINUE");
 }
 
+void end_program()
+{
+    // allocate global variables
+    all_program();
+    gen_pre(OP_END, "end of program");
+}
+
+
+// the following are the actual code generation functions
+
+void gen_begin()
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\n", OP_BEGIN);
+    }
+    else
+    {
+        GenBegin();
+    }
+}
+
+void gen_alu(const char *mod, const char *comment)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", OP_ALU, mod, comment);
+    }
+    else
+    {
+        GenAlu(mod, comment);
+    }
+}
+
+void gen_load_immed(const char *constant)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\t%s\t%s\n", OP_LOAD, MOD_IMMED, constant);
+    }
+    else
+    {
+        GenLoadImmed(constant);
+    }
+}
+
+void gen(const char *op, const char *mod, int val, const char *comment)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\t%s\t%d\t;\t%s\n", op, mod, val, comment);
+    }
+    else
+    {
+        Gen(op, mod, val, comment);
+    }
+}
+
+void gen_pre(const char *op, const char *comment)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\t\t\t;\t%s\n", op, comment);
+    }
+    else
+    {
+        GenPopRetEnd(op, comment);
+    }
+}
+
+int gen_jump(const char *op, int label, const char *comment)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%s\t%s\t\t;\t%s\n", op, format_label(label), comment);
+    }
+    else
+    {
+        GenJump(op, format_label(label), comment);
+    }
+    
+    return label;
+}
+
+int gen_label(int label)
+{
+    if (emitVmCode)
+    {
+        //fprintf(yyout, "%s\tequ\t*\n", format_label(label));
+        fprintf(yyout, "label\t%s\n", format_label(label));
+    }
+    else
+    {
+        GenLabel(format_label(label));
+    }
+    
+    return label;
+}
+
 void gen_call(struct Symtab *symbol, int count)
 {
     chk_parm(symbol, count);
-    //fprintf(yyout, "\t%s\t%d,%s\n", OP_CALL, count, symbol->s_name);
-    fprintf(yyout, "\t%s\t%s\n", OP_CALL, symbol->s_name);
+    if (emitVmCode)
+    {
+        //fprintf(yyout, "\t%s\t%d,%s\n", OP_CALL, count, symbol->s_name);
+        fprintf(yyout, "\t%s\t%s\n", OP_CALL, symbol->s_name);
+    }
+    else
+    {
+        GenCall(symbol->s_name);
+    }
     while (count-- > 0)
-        gen_expr(OP_POP, "pop argument");
+    {
+        gen_pre(OP_POP, "pop argument");
+    }
     gen(OP_LOAD, MOD_GLOBAL, 0, "push result");
 }
 
@@ -163,22 +240,29 @@ int gen_entry(struct Symtab *symbol)
 {
     int label = new_label();
     
-    //fprintf(yyout, "%s\t", symbol->s_name);
-    //fprintf(yyout, "%s\t%s\n", OP_ENTRY, format_label(label));
-    fprintf(yyout, "%s\t%s\t%s\n", OP_ENTRY, symbol->s_name, format_label(label));
+    if (emitVmCode)
+    {
+        fprintf(yyout, "%s\t%s\t%s\n", OP_ENTRY, symbol->s_name, format_label(label));
+    }
+    else
+    {
+        GenEntry(symbol->s_name, format_label(label));
+    }
+    
     return label;
 }
 
 void fix_entry(struct Symtab *symbol, int label)
 {
-    fprintf(yyout, "%s\tequ\t%d\t\t;\t%s\n", format_label(label), l_max, symbol->s_name);
+    if (emitVmCode)
+    {
+        fprintf(yyout, "%s\tequ\t%d\t\t;\t%s\n", format_label(label), l_max, symbol->s_name);
+    }
+    else
+    {
+        GenEqu(format_label(label), l_max);
+    }
 }
 
-void end_program()
-{
-    // allocate global variables
-    all_program();
-    //fprintf(yyout, "\tend\t%d, main\n", g_offset);
-    gen_expr("end", "end of program");
-}
+// end of gen.c
 

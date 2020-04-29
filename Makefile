@@ -5,8 +5,8 @@ TARGET = hcc
 CFLAGS = -O0 -g -Wall -c
 LIBS = -ll
 
-HEADERS = error.h symtab.h message.h gen.h
-OBJECTS = main.o error.o symtab.o message.o gen.o lex.yy.o y.tab.o
+HEADERS = error.h symtab.h message.h gen.h gen_hack.h
+OBJECTS = main.o error.o symtab.o message.o gen.o gen_hack.o lex.yy.o y.tab.o
 
 .PHONY: all
 all: $(TARGET)

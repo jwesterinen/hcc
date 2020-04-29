@@ -7,16 +7,62 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <getopt.h>
 #include "y.tab.h"
 
 extern FILE *yyerfp;
 
-static int usage(const char* name)
+// options
+static char *outfileName = 0;
+static char *infileName = 0;
+int emitVmCode = 0;
+int verbose = 0;
+
+static void ParseOptions(int argc, char* argv[])
 {
-    fputs("usage: ", stderr);
-    fputs(name, stderr);
-    fputs(" [C preprocessor options] [source]\n", stderr);
-    exit(1);
+	const char* optStr = "CD:I:PU:o:ivh";
+	int opt;
+
+	while ((opt = getopt(argc, argv, optStr)) != -1)
+	{
+		switch (opt)
+		{
+		    // cpp options, just pass thru
+		    case 'C':
+		    case 'D':
+		    case 'I':
+		    case 'P':
+		    case 'U':
+		        break;
+		    
+			case 'o':
+				outfileName = optarg;
+				break;
+			case 'i':
+				emitVmCode = 1;
+				break;
+			case 'v':
+				verbose = 1;
+				break;
+			case 'h':
+				printf("usage: hcc [-o <filename>] [-v] [-h]\n");
+				printf("\n");
+				printf("     options:\n");
+				printf("         -o <filename>: set the output file name\n");
+				printf("         -v:            set verbose mode\n");
+				printf("         -h:            display this help\n");
+				exit(0);
+			default:
+				printf("usage: hcc [CDIPU] [-o <filename>] [-v] [-h]\n");
+				exit(-1);
+		}
+	}
+	
+	// the input file name is the first non-option cmd line arg
+	if (optind < argc)
+	{
+	    infileName = argv[optind];
+	}
 }
 
 /*
@@ -65,14 +111,12 @@ int cpp(int argc, char** argv)
 }
 
 /*
- *  main() -- possibly run C preprocessor before yyparse()
+ *  main() -- run C preprocessor then yyparse()
  */
 int main(int argc, char** argv)
 {
     // output file
     extern FILE* yyout;
-    char *bname;
-    char outfileName[80];
     
     // init the error stream
     //yyerfp = stdout;
@@ -83,39 +127,31 @@ int main(int argc, char** argv)
     //yydebug = 1;
 #endif
 
-    // TODO: change to using getopt()
-    char** argp;
+    // for now cpp will always be called
     int cppflag = 1;
-    for (argp = argv; *++argp && **argp == '-'; )
+    
+	// parse the command line options
+	ParseOptions(argc, argv);
+
+    // redirect infileName as stdin      
+    if (infileName && !freopen(infileName, "r", stdin))
     {
-        switch((*argp)[1])
-        {
-            case 'C':
-            case 'D':
-            case 'E':
-            case 'I':
-            case 'P':
-            case 'U':
-                cppflag = 1;
-                break;
-            default:
-                usage(argv[0]);
-                break;
-        }
+        perror(infileName);
+        exit(1);
     }
-    if (argp[0] && argp[1])
-        usage(argv[0]);
-    if (*argp && !freopen(*argp, "r", stdin))
-        perror(*argp), exit(1);
+    
+    // run the C preprocessor
     if (cppflag && cpp(argc, argv))
-        perror("C preprocessor"), exit(1);
+    {
+        perror("C preprocessor");
+        exit(1);
+    }
         
-    // open the output file as the input file with a .cvm extension
-    bname = basename(argv[1]);
-    //sscanf(bname, "%s.c", outfileName);
-    strcpy(outfileName, bname);
-    strcat(outfileName, "vm");
-    yyout = fopen(outfileName, "w");
+    // open the output file if specified (otherwise output will be to stdout)
+    if (outfileName)
+    {
+        yyout = fopen(outfileName, "w");
+    }
     
     // run the parser
     exit(yyparse());

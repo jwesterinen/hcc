@@ -3,6 +3,7 @@
  */
 
 // pseudo op codes
+#define OP_BEGIN    "begin"     // arithmetic/logic op
 #define OP_ALU      "alu"       // arithmetic/logic op
 #define OP_DEC      "dec"       // region, offset
 #define OP_INC      "inc"       // region, offset
@@ -14,6 +15,7 @@
 #define OP_CALL     "call"      // parm-count, address
 #define OP_ENTRY    "entry"     // local-frame-size
 #define OP_RETURN   "return"    // 
+#define OP_END      "end"       // 
 
 // region modifiers
 #define MOD_GLOBAL  "gbl"       // global region
@@ -37,11 +39,12 @@
 #define ALU_OR      "|"         // bitwise or
 #define ALU_XOR     "^"         // bitwise xor  
 
+void gen_begin();
 void gen_alu(const char *mod, const char *comment);
 void gen_load_immed(const char *constant);
 char *gen_mod(struct Symtab *symbol);
 void gen(const char *op, const char *mod, int val, const char *comment);
-void gen_expr(const char *op, const char *comment);
+void gen_pre(const char *op, const char *comment);
 int gen_jump(const char *op, int label, const char *comment);
 int new_label();
 int gen_label(int label);

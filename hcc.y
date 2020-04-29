@@ -95,6 +95,7 @@ program
 	:   
 	    {
 	        init();
+	        gen_begin();
 	    }
 	  definitions
 	    {
@@ -131,7 +132,7 @@ function_definition
 	  compound_statement
 	    {
 	        all_func($1);
-	        gen_expr(OP_RETURN, "end of function");
+	        gen_pre(OP_RETURN, "end of function");
 	        fix_entry($1, $<y_lab>6);
 	    }
 
@@ -232,7 +233,7 @@ statements
 statement
 	: expression sc/*';'*/
 	    {
-	        gen_expr(OP_POP, "clear stack");
+	        gen_pre(OP_POP, "clear stack");
 	    }
 	| sc/*';'*/  /* null statement */
 	| BREAK sc/*';'*/
@@ -240,11 +241,11 @@ statement
 	| CONTINUE sc/*';'*/
 	    {gen_continue();}
 	| RETURN sc/*';'*/
-	    {gen_expr(OP_RETURN, "RETURN");}
+	    {gen_pre(OP_RETURN, "RETURN");}
 	| RETURN expression sc/*';'*/
 	    {
 	        gen(OP_STORE, MOD_GLOBAL, 0, "save result");
-            gen_expr(OP_RETURN, "RETURN");	        
+            gen_pre(OP_RETURN, "RETURN");	        
 	    }
 	| compound_statement
 	| if_prefix statement
@@ -294,7 +295,7 @@ expression
 	| expression ','
 	    {
 	        yyerrok;
-	        gen_expr(OP_POP, "discard");
+	        gen_pre(OP_POP, "discard");
 	    }
 	  binary
 	| error ',' binary
