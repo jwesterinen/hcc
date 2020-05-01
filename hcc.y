@@ -244,7 +244,7 @@ statement
 	    {gen_pre(OP_RETURN, "RETURN");}
 	| RETURN expression sc/*';'*/
 	    {
-	        gen(OP_STORE, MOD_GLOBAL, 0, "save result");
+	        gen_direct(OP_STORE, MOD_GLOBAL, 0, "save result");
             gen_pre(OP_RETURN, "RETURN");	        
 	    }
 	| compound_statement
@@ -309,7 +309,7 @@ binary
 	: Identifier
 	    { 
 	        chk_var($1);
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Constant
 	    {gen_load_immed($1);}
@@ -322,12 +322,12 @@ binary
 	| PP Identifier
 	    {
 	        chk_var($2);
-	        gen(OP_INC, gen_mod($2), OFFSET($2), NAME($2));
+	        gen_direct(OP_INC, gen_mod($2), OFFSET($2), NAME($2));
 	    }
 	| MM Identifier
 	    {
 	        chk_var($2);
-	        gen(OP_DEC, gen_mod($2), OFFSET($2), NAME($2));
+	        gen_direct(OP_DEC, gen_mod($2), OFFSET($2), NAME($2));
 	    }
 	| binary '+' binary
 	    {gen_alu(ALU_ADD, "+");}
@@ -360,57 +360,57 @@ binary
 	| Identifier '=' binary
 	    { 
 	        chk_var($1); 
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Identifier PE
 	    { 
 	        chk_var($1); 
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	  binary
 	    { 
 	        gen_alu(ALU_ADD, "+");
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Identifier ME
 	    { 
 	        chk_var($1); 
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	  binary
 	    { 
 	        gen_alu(ALU_SUB, "-");
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Identifier TE binary
 	    { 
 	        chk_var($1); 
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	  binary
 	    { 
 	        gen_alu(ALU_MUL, "*");
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Identifier DE binary
 	    { 
 	        chk_var($1); 
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	  binary
 	    { 
 	        gen_alu(ALU_DIV, "/");
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	| Identifier RE binary
 	    { 
 	        chk_var($1); 
-	        gen(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 	  binary
 	    { 
 	        gen_alu(ALU_MOD, "%");
-	        gen(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 
 optional_argument_list

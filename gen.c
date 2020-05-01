@@ -164,7 +164,7 @@ void gen_load_immed(const char *constant)
     }
 }
 
-void gen(const char *op, const char *mod, int val, const char *comment)
+void gen_direct(const char *op, const char *mod, int val, const char *comment)
 {
     if (emitVmCode)
     {
@@ -172,7 +172,7 @@ void gen(const char *op, const char *mod, int val, const char *comment)
     }
     else
     {
-        Gen(op, mod, val, comment);
+        GenDirect(op, mod, val, comment);
     }
 }
 
@@ -233,7 +233,7 @@ void gen_call(struct Symtab *symbol, int count)
     {
         gen_pre(OP_POP, "pop argument");
     }
-    gen(OP_LOAD, MOD_GLOBAL, 0, "push result");
+    gen_direct(OP_LOAD, MOD_GLOBAL, 0, "push result");
 }
 
 int gen_entry(struct Symtab *symbol)
@@ -264,5 +264,5 @@ void fix_entry(struct Symtab *symbol, int label)
     }
 }
 
-// end of gen.c
+// end of gen_direct.c
 

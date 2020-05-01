@@ -10,17 +10,19 @@
 #include <getopt.h>
 #include "y.tab.h"
 
+extern FILE* yyout;
 extern FILE *yyerfp;
 
 // options
 static char *outfileName = 0;
 static char *infileName = 0;
+int noProlog = 0;
 int emitVmCode = 0;
 int verbose = 0;
 
 static void ParseOptions(int argc, char* argv[])
 {
-	const char* optStr = "CD:I:PU:o:ivh";
+	const char* optStr = "CD:I:PU:co:ivh";
 	int opt;
 
 	while ((opt = getopt(argc, argv, optStr)) != -1)
@@ -35,6 +37,9 @@ static void ParseOptions(int argc, char* argv[])
 		    case 'U':
 		        break;
 		    
+			case 'c':
+				noProlog = 1;
+				break;
 			case 'o':
 				outfileName = optarg;
 				break;
@@ -115,8 +120,10 @@ int cpp(int argc, char** argv)
  */
 int main(int argc, char** argv)
 {
-    // output file
-    extern FILE* yyout;
+    char name[80];
+    
+    // default output file to stdout
+    yyout = stdout;
     
     // init the error stream
     //yyerfp = stdout;
@@ -147,10 +154,24 @@ int main(int argc, char** argv)
         exit(1);
     }
         
-    // open the output file if specified (otherwise output will be to stdout)
-    if (outfileName)
+    // default to the base name of the input file name with the extension changed to .hasm
+    if (!outfileName)
     {
-        yyout = fopen(outfileName, "w");
+        char *nextc;
+        
+        strcpy(name, basename(infileName));
+        for (nextc = name; *nextc != '.'; nextc++)
+            ;
+        *nextc = '\0';
+        strcat(name, ".hasm");
+        outfileName = name;    
+    }
+    
+    // open the output file if specified (otherwise output will be to stdout)
+    if ((yyout = fopen(outfileName, "w")) == 0)
+    {
+        fprintf(stderr, "hcc: cannot open file %s\n", outfileName);
+        exit(1);
     }
     
     // run the parser

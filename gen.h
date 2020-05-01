@@ -1,5 +1,5 @@
 /*
- *  gen.h - code generator definitions
+ *  gen_direct.h - code generator definitions
  */
 
 // pseudo op codes
@@ -43,7 +43,7 @@ void gen_begin();
 void gen_alu(const char *mod, const char *comment);
 void gen_load_immed(const char *constant);
 char *gen_mod(struct Symtab *symbol);
-void gen(const char *op, const char *mod, int val, const char *comment);
+void gen_direct(const char *op, const char *mod, int val, const char *comment);
 void gen_pre(const char *op, const char *comment);
 int gen_jump(const char *op, int label, const char *comment);
 int new_label();
