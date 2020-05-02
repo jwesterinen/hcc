@@ -22,7 +22,7 @@ unsigned curLocalVarQty;
 #define FRAME_BASE 512
 #define EXPR_BASE 768
 
-void GenBegin()
+void GenBeginProg()
 {
     fprintf(yyout, "\n// begin program\n");
     
@@ -43,6 +43,15 @@ void GenBegin()
 	// jump to main()
 	fprintf(yyout, "    @main\n");
 	fprintf(yyout, "    0;JMP\n");
+}
+
+void GenEndProg()
+{
+    fprintf(yyout, "\n// end program\n");
+    
+    fprintf(yyout, "(__Exit)\n");
+    fprintf(yyout, "    @__Exit\n");
+    fprintf(yyout, "    0;JMP\n\n");
 }
 
 void GenCall(const char *fctname)
@@ -315,7 +324,7 @@ void GenDirect(const char *op, const char *vartype, int offset, const char *glob
 }
 
 // FIXME: break these up into their own functions
-void GenPopRetEnd(const char *op, const char *comment)
+void GenPopRet(const char *op, const char *comment)
 {
     if (!strcmp(op, OP_POP))
     {
@@ -352,14 +361,6 @@ void GenPopRetEnd(const char *op, const char *comment)
             fprintf(yyout, "    A=M\n");
             fprintf(yyout, "    0;JMP\n");
         }
-    }
-    else if (!strcmp(op, OP_END))
-    {
-        fprintf(yyout, "\n// end\n");
-        
-        fprintf(yyout, "(__Exit)\n");
-        fprintf(yyout, "    @__Exit\n");
-        fprintf(yyout, "    0;JMP\n\n");
     }
 }
 

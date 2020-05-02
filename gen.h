@@ -39,12 +39,13 @@
 #define ALU_OR      "|"         // bitwise or
 #define ALU_XOR     "^"         // bitwise xor  
 
-void gen_begin();
+void gen_begin_prog();
+void gen_end_prog();
 void gen_alu(const char *mod, const char *comment);
 void gen_load_immed(const char *constant);
 char *gen_mod(struct Symtab *symbol);
 void gen_direct(const char *op, const char *mod, int val, const char *comment);
-void gen_pre(const char *op, const char *comment);
+void gen_pr(const char *op, const char *comment);
 int gen_jump(const char *op, int label, const char *comment);
 int new_label();
 int gen_label(int label);

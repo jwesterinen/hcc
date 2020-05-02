@@ -10,6 +10,7 @@
 #include "gen_hack.h"
 
 extern FILE *yyout;
+extern int objOnly;
 extern int emitVmCode;
 extern int verbose;
 
@@ -122,21 +123,39 @@ void end_program()
 {
     // allocate global variables
     all_program();
-    gen_pre(OP_END, "end of program");
+    gen_end_prog();
 }
 
 
 // the following are the actual code generation functions
 
-void gen_begin()
+void gen_begin_prog()
 {
-    if (emitVmCode)
+    if (!objOnly)
     {
-        fprintf(yyout, "\t%s\n", OP_BEGIN);
+        if (emitVmCode)
+        {
+            fprintf(yyout, "\t%s\n", OP_BEGIN);
+        }
+        else
+        {
+            GenBeginProg();
+        }
     }
-    else
+}
+
+void gen_end_prog()
+{
+    if (!objOnly)
     {
-        GenBegin();
+        if (emitVmCode)
+        {
+            fprintf(yyout, "\t%s\n", OP_END);
+        }
+        else
+        {
+            GenEndProg();
+        }
     }
 }
 
@@ -176,7 +195,7 @@ void gen_direct(const char *op, const char *mod, int val, const char *comment)
     }
 }
 
-void gen_pre(const char *op, const char *comment)
+void gen_pr(const char *op, const char *comment)
 {
     if (emitVmCode)
     {
@@ -184,7 +203,7 @@ void gen_pre(const char *op, const char *comment)
     }
     else
     {
-        GenPopRetEnd(op, comment);
+        GenPopRet(op, comment);
     }
 }
 
@@ -231,7 +250,7 @@ void gen_call(struct Symtab *symbol, int count)
     }
     while (count-- > 0)
     {
-        gen_pre(OP_POP, "pop argument");
+        gen_pr(OP_POP, "pop argument");
     }
     gen_direct(OP_LOAD, MOD_GLOBAL, 0, "push result");
 }

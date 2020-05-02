@@ -16,13 +16,13 @@ extern FILE *yyerfp;
 // options
 static char *outfileName = 0;
 static char *infileName = 0;
-int noProlog = 0;
+int objOnly = 0;
 int emitVmCode = 0;
 int verbose = 0;
 
 static void ParseOptions(int argc, char* argv[])
 {
-	const char* optStr = "CD:I:PU:co:ivh";
+	const char* optStr = "CD:I:PU:So:ivh";
 	int opt;
 
 	while ((opt = getopt(argc, argv, optStr)) != -1)
@@ -37,8 +37,8 @@ static void ParseOptions(int argc, char* argv[])
 		    case 'U':
 		        break;
 		    
-			case 'c':
-				noProlog = 1;
+			case 'S':
+				objOnly = 1;
 				break;
 			case 'o':
 				outfileName = optarg;
@@ -50,15 +50,16 @@ static void ParseOptions(int argc, char* argv[])
 				verbose = 1;
 				break;
 			case 'h':
-				printf("usage: hcc [-o <filename>] [-v] [-h]\n");
+				printf("usage: hcc [CDIPU] [-S] [-o <filename>] [-v] [-h]\n");
 				printf("\n");
 				printf("     options:\n");
+				printf("         -S:            compile to hasm object\n");
 				printf("         -o <filename>: set the output file name\n");
 				printf("         -v:            set verbose mode\n");
 				printf("         -h:            display this help\n");
 				exit(0);
 			default:
-				printf("usage: hcc [CDIPU] [-o <filename>] [-v] [-h]\n");
+				printf("usage: hcc [CDIPU] [-S]  [-o <filename>] [-v] [-h]\n");
 				exit(-1);
 		}
 	}
@@ -163,11 +164,18 @@ int main(int argc, char** argv)
         for (nextc = name; *nextc != '.'; nextc++)
             ;
         *nextc = '\0';
-        strcat(name, ".hasm");
+        if (objOnly)
+        {
+            strcat(name, ".ho");
+        }
+        else
+        {
+            strcat(name, ".hasm");
+        }
         outfileName = name;    
     }
     
-    // open the output file if specified (otherwise output will be to stdout)
+    // open the output file
     if ((yyout = fopen(outfileName, "w")) == 0)
     {
         fprintf(stderr, "hcc: cannot open file %s\n", outfileName);
