@@ -145,14 +145,14 @@ int main(int argc, char** argv)
     if (infileName && !freopen(infileName, "r", stdin))
     {
         perror(infileName);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     // run the C preprocessor
     if (cppflag && cpp(argc, argv))
     {
         perror("C preprocessor");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
         
     // default to the base name of the input file name with the extension changed to .hasm
@@ -179,11 +179,11 @@ int main(int argc, char** argv)
     if ((yyout = fopen(outfileName, "w")) == 0)
     {
         fprintf(stderr, "hcc: cannot open file %s\n", outfileName);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     // run the parser
-    exit(yyparse());
+    return yyparse();
 }
 
 // end of main.c
