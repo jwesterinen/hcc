@@ -24,6 +24,7 @@ other           .
 "else"                      return ELSE;
 "if"                        return IF;
 "int"                       return INT;
+"void"                      return VOID;
 "return"                    return RETURN;
 "while"                     return WHILE;
 

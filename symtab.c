@@ -23,6 +23,9 @@ static int blknum = 0;
 int g_offset = 1,           // offset in global region
     l_offset = 0,           // offset in local region
     l_max;                  // size of local region
+    
+// void flag
+int is_void = 0;    
 
 static char* strsave(const char* s)
 {
@@ -155,6 +158,7 @@ struct Symtab *link_parm(struct Symtab *symbol, struct Symtab *next)
             error("duplicate parameter %s", symbol->s_name);
             return next;
         case FUNC:
+        case VFUNC:
         case UFUNC:
         case VAR:
             symbol = s_create(symbol->s_name);
@@ -176,6 +180,7 @@ static struct Symtab *make_var(struct Symtab *symbol)
     {
         case VAR:
         case FUNC:
+        case VFUNC:
         case UFUNC:
             if (symbol->s_blknum == blknum ||
                 (symbol->s_blknum == 2 && blknum == 3))
@@ -195,7 +200,7 @@ static struct Symtab *make_var(struct Symtab *symbol)
     return symbol;
 }
 
-struct Symtab *make_func(struct Symtab *symbol)
+struct Symtab *make_func(int returnQty, struct Symtab *symbol)
 {
     switch (symbol->s_type)
     {
@@ -211,7 +216,7 @@ struct Symtab *make_func(struct Symtab *symbol)
         default:
             bug("make_func");
     }
-    symbol->s_type = FUNC;
+    symbol->s_type = (returnQty == 1) ? FUNC : VFUNC;
     symbol->s_blknum = 1;
 
     return symbol;
@@ -251,6 +256,7 @@ void chk_var(struct Symtab *symbol)
             error("unexpected parameter %s", symbol->s_name);
             break;
         case FUNC:
+        case VFUNC:
         case UFUNC:
             error("function %s used as variable", symbol->s_name);
         case VAR:
@@ -276,6 +282,7 @@ void chk_func(struct Symtab *symbol)
             error("variable %s used as function", symbol->s_name);
             symbol->s_pnum = NOT_SET;
         case FUNC:
+        case VFUNC:
         case UFUNC:
             return;
         default:

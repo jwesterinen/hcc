@@ -191,6 +191,7 @@ void gen_direct(const char *op, const char *mod, int val, const char *comment)
     }
     else
     {
+        // FIXME: this needs a better solution like making PP and MM to not be expressions?
         GenDirect(op, mod, val, comment);
     }
 }
@@ -252,7 +253,14 @@ void gen_call(struct Symtab *symbol, int count)
     {
         gen_pr(OP_POP, "pop argument");
     }
-    gen_direct(OP_LOAD, MOD_GLOBAL, 0, "push result");
+    if (symbol->s_type != VFUNC)
+    {
+        gen_direct(OP_LOAD, MOD_GLOBAL, 0, "push result");
+    }
+    else
+    {
+        is_void = 1;
+    }
 }
 
 int gen_entry(struct Symtab *symbol)

@@ -1,17 +1,23 @@
 int g;
 
-main()
+void foo(a)
 {
-    int x;
+    g = a;
+}
+
+int bar(a)
+{
+    return a+1;
+}
+
+void main()
+{
+    int x, y;
     
     x = 1;
     foo(x);
     x = x + 1;
     foo(x);
-}
-
-foo(a)
-{
-    g = a;
+    y = bar(x);
 }
 

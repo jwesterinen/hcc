@@ -20,7 +20,7 @@ int yylex(void);
  
 %union  {
             struct Symtab *y_sym;   // Identifier
-            char *y_str;            // Constant  
+            char *y_str;            // Constant, type  
             int y_num;              // count
             int y_lab;              // label
         }
@@ -32,6 +32,7 @@ int yylex(void);
 %token  <y_sym> Identifier
 %token  <y_str> Constant
 %token  INT
+%token  VOID
 %token  IF
 %token  ELSE
 %token  WHILE
@@ -71,7 +72,7 @@ int yylex(void);
  *	typed non-terminal symbols
  */
 
-%type   <y_sym> optional_parameter_list parameter_list
+%type   <y_sym> function_definition function_declaration optional_parameter_list parameter_list
 %type   <y_num> optional_argument_list argument_list
 %type   <y_lab> if_prefix loop_prefix
 
@@ -113,19 +114,11 @@ definitions
 
 definition
 	: function_definition
-	| INT function_definition
 	| declaration
 
 function_definition
-	: Identifier '('
+	: function_declaration
 	    {
-	        make_func($1);
-	        blk_push();
-	    } 
-	  optional_parameter_list rp/*)*/ 
-	    {
-	        chk_parm($1, parm_default($4));
-	        all_parm($4);
 	        l_max = 0;
 	        $<y_lab>$ = gen_entry($1);
 	    }
@@ -133,8 +126,32 @@ function_definition
 	    {
 	        all_func($1);
 	        gen_pr(OP_RETURN, "end of function");
-	        fix_entry($1, $<y_lab>6);
+	        fix_entry($1, $<y_lab>2);
 	    }
+
+function_declaration
+	: INT Identifier '(' 
+	    {
+	        make_func(1, $2);
+	        blk_push();
+	    }
+	  optional_parameter_list rp/*)*/
+	    {
+	        chk_parm($2, parm_default($5));
+	        all_parm($5);
+	        $$ = $2;
+	    } 
+	| VOID Identifier '(' 
+	    {
+	        make_func(0, $2);
+	        blk_push();
+	    }
+	  optional_parameter_list rp/*)*/
+	    {
+	        chk_parm($2, parm_default($5));
+	        all_parm($5);
+	        $$ = $2;
+	    } 
 
 optional_parameter_list
 	: /* no formal parameters */
@@ -197,7 +214,11 @@ declarations
 
 declaration
 	: INT declarator_list sc/*';'*/
-
+	| function_declaration sc/*';'*/
+	    {
+	        blk_pop();
+	    }
+	
 declarator_list
 	: declarator
 	| declarator_list ',' declarator
@@ -233,7 +254,10 @@ statements
 statement
 	: expression sc/*';'*/
 	    {
-	        gen_pr(OP_POP, "clear stack");
+	        if (!is_void)
+	            gen_pr(OP_POP, "clear stack");
+	        else
+	            is_void = 0;
 	    }
 	| sc/*';'*/  /* null statement */
 	| BREAK sc/*';'*/
@@ -417,7 +441,7 @@ optional_argument_list
 	: /* no actual arguments */
 	    {$$ = 0;}
 	| argument_list
-	    /* $$ = $1 = # of actual arguments */
+	    /* default action, $$ = $1, = # of actual arguments */
 
 argument_list
 	: binary

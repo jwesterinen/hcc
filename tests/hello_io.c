@@ -1,6 +1,8 @@
 // I/O test
 
-main()
+#include <hack_stdlib.h>
+
+void main()
 {
     SetGpioDir(1);
     while (1)

@@ -40,6 +40,8 @@
  *   +           020
  * 
  */
+ 
+#include <hack_stdlib.h>
 
 // CLR, +, -, *, /
 #define KEYCODE_CLR         30
@@ -55,7 +57,7 @@ int isNewEntry;
 int keycode;
 int a, b;
 
-main()
+void main()
 {
     isNewEntry = 1;
     

@@ -23,15 +23,19 @@ struct Symtab
 // s_type values
 #define UDEC    0               // not declared
 #define FUNC    1               // function
-#define UFUNC   2               // undefined function
-#define VAR     3               // declared variable
-#define PARM    4               // undeclared parameter
+#define VFUNC   2               // void function
+#define UFUNC   3               // undefined function
+#define VAR     4               // declared variable
+#define PARM    5               // undeclared parameter
 
 // s_type string values
-#define SYMmap   "udecl", "fct", "udef fct", "var", "parm"
+#define SYMmap   "udecl", "fct", "vfct", "udef fct", "var", "parm"
 
 // offsets
 extern int g_offset, l_offset, l_max;
+
+// void type function
+extern int is_void;
 
 void init();
 void blk_push();
@@ -43,7 +47,7 @@ void s_lookup(int yylex);
 struct Symtab *s_find(const char *name);
 struct Symtab *link_parm(struct Symtab *symbol, struct Symtab *next);
 void all_var(struct Symtab *symbol);
-struct Symtab *make_func(struct Symtab *symbol);
+struct Symtab *make_func(int returnQty, struct Symtab *symbol);
 void chk_parm(struct Symtab *symbol, int count);
 int parm_default(struct Symtab *symbol);
 void chk_var(struct Symtab *symbol);
