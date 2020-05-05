@@ -73,7 +73,7 @@ int yylex(void);
  */
 
 %type   <y_sym> function_definition function_declaration optional_parameter_list parameter_list
-%type   <y_num> optional_argument_list argument_list
+%type   <y_num> parameter_type optional_argument_list argument_list
 %type   <y_lab> if_prefix loop_prefix
 
 /*
@@ -162,13 +162,13 @@ optional_parameter_list
 	    /* $$ = $1 = chain of formal parameters */
 
 parameter_list
-    : Identifier
+    : parameter_type Identifier
         {
-            $$ = link_parm($1, (struct Symtab *)0);
+            $$ = link_parm($1, $2, (struct Symtab *)0);
         }
-    | Identifier ',' parameter_list
+    | parameter_type Identifier ',' parameter_list
         {
-            $$ = link_parm($1, $3);
+            $$ = link_parm($1, $2, $4);
             yyerrok;
         }
     | error
@@ -179,9 +179,9 @@ parameter_list
         {
             $$ = $2;
         }
-    | Identifier error parameter_list
+    | parameter_type Identifier error parameter_list
         {
-            $$ = link_parm($1, $3);
+            $$ = link_parm($1, $2, $4);
             yyerrok;
         }
     | error ',' parameter_list
@@ -189,6 +189,14 @@ parameter_list
             $$ = $3;
             yyerrok;
         }
+        
+parameter_type
+    : /* none */
+        {$$ = 0;}
+    | INT  
+        {$$ = 0;}
+    | INT '*'    
+        {$$ = 1;}  
     
 compound_statement
 	: '{' 
@@ -238,10 +246,18 @@ declarator
         {
             all_var($1);
         }
-    | Identifier '=' Constant
+    | Identifier '=' initializer
         {
             all_var($1);
+	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	        gen_pr(OP_POP, "clear stack");
         }
+
+initializer
+    : Constant
+	    {
+	        gen_load_immed($1);
+	    }
     
 statements
 	: /* null */

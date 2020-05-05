@@ -45,7 +45,7 @@ void all_func(struct Symtab *symbol);
 void all_parm(struct Symtab *symbol);
 void s_lookup(int yylex);
 struct Symtab *s_find(const char *name);
-struct Symtab *link_parm(struct Symtab *symbol, struct Symtab *next);
+struct Symtab *link_parm(int type, struct Symtab *symbol, struct Symtab *next);
 void all_var(struct Symtab *symbol);
 struct Symtab *make_func(int returnQty, struct Symtab *symbol);
 void chk_parm(struct Symtab *symbol, int count);

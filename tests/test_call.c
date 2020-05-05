@@ -1,11 +1,11 @@
 int g;
 
-void foo(a)
+void foo(int *a)
 {
     g = a;
 }
 
-int bar(a)
+int bar(int a)
 {
     return a+1;
 }
