@@ -53,6 +53,10 @@
 // converts a digit keycode to an integer
 #define KEYCODE_MASK        15
 
+// expression stack
+int exprStack[20];
+int tos = 0;
+
 int isNewEntry;
 int keycode;
 int a, b;
@@ -98,10 +102,9 @@ void main()
             }
             else if (keycode == KEYCODE_MINUS)
             {
-                // sub: TOS = b - a
-                a = ExprPop();
-                b = ExprTop();
-                ExprPut(b - a);
+                // sub: TOS = a - b
+                b = ExprPop();
+                ExprPut(ExprTop() - b);
             }
             else if (keycode == KEYCODE_MULTIPLY)
             {
@@ -110,10 +113,9 @@ void main()
             }
             else if (keycode == KEYCODE_DIVIDE)
             {
-                // div: TOS = b / a
-                a = ExprPop();
-                b = ExprTop();
-                ExprPut(b / a);
+                // div: TOS = a / b
+                b = ExprPop();
+                ExprPut(ExprTop() / b);
             }
             
             // display the expression result

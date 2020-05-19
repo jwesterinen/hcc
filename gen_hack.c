@@ -19,7 +19,8 @@ int returnId = 0;
 unsigned curLocalVarQty;
 
 #define STACK_BASE 256
-#define FRAME_BASE 512
+#define FRAME_BASE 0
+#define GLOBAL_BASE 512
 #define EXPR_BASE 768
 
 void GenBeginProg()
@@ -34,6 +35,10 @@ void GenBeginProg()
 	fprintf(yyout, "    @%d\n", FRAME_BASE);
 	fprintf(yyout, "    D=A\n");
 	fprintf(yyout, "    @BP\n");
+	fprintf(yyout, "    M=D\n");
+	fprintf(yyout, "    @%d\n", GLOBAL_BASE);
+	fprintf(yyout, "    D=A\n");
+	fprintf(yyout, "    @GLB\n");
 	fprintf(yyout, "    M=D\n");
 	fprintf(yyout, "    @%d\n", EXPR_BASE);
 	fprintf(yyout, "    D=A\n");
@@ -228,15 +233,18 @@ static void GenAccessVar(const char *vartype, int offset, const char *globalName
 	    }
 	    else
 	    {
-            // use the global name directly
-            fprintf(yyout, "    @%s\t// global\n", globalName);
+            // globals are at at GLB + offset
+            fprintf(yyout, "    @%d\t// global %s\n", offset, globalName); // adjust the var offset from the BP
+            fprintf(yyout, "    D=A\n");
+            fprintf(yyout, "    @GLB\n");                    // point to the var
+            fprintf(yyout, "    A=M+D\n");
         }
     }
     else if (!strcmp(vartype, "par"))
     {
         // parameter n is at BP-(n+2)
         offset += 2;
-        fprintf(yyout, "    @%d\t// %s\n", offset, globalName); // adjust the var offset from the BP
+        fprintf(yyout, "    @%d\t// param %s\n", offset, globalName); // adjust the var offset from the BP
         fprintf(yyout, "    D=A\n");
         fprintf(yyout, "    @BP\n");                    // point to the var
         fprintf(yyout, "    A=M-D\n");
@@ -245,7 +253,7 @@ static void GenAccessVar(const char *vartype, int offset, const char *globalName
     {
         // local variable n is at BP+n+1
         offset += 1;
-        fprintf(yyout, "    @%d\t// %s\n", offset, globalName); // adjust the var offset from the BP
+        fprintf(yyout, "    @%d\t// local %s\n", offset, globalName); // adjust the var offset from the BP
         fprintf(yyout, "    D=A\n");
         fprintf(yyout, "    @BP\n");                    // point to the var
         fprintf(yyout, "    A=D+M\n");
@@ -264,8 +272,8 @@ void GenDirect(const char *op, const char *vartype, int offset, const char *glob
         fprintf(yyout, "\n// load\n");
         
         GenAccessVar(vartype, offset, globalName);      // point to the effective address of the var
-        fprintf(yyout, "    D=M\n");
-        fprintf(yyout, "    @SP\n");                    // push the var
+        fprintf(yyout, "    D=M\n");                    // push the var
+        fprintf(yyout, "    @SP\n");
         fprintf(yyout, "    M=M+1\n");               
         fprintf(yyout, "    A=M\n");
         fprintf(yyout, "    M=D\n");
@@ -273,35 +281,23 @@ void GenDirect(const char *op, const char *vartype, int offset, const char *glob
     else if (!strcmp(op, OP_STORE))
     {
         fprintf(yyout, "\n// store\n");
+
+        GenAccessVar(vartype, offset, globalName);      // get the var _address_
+        fprintf(yyout, "    D=A\n");        
+        fprintf(yyout, "    @SP\n");                    // push the var address (<segment addr>+<index>)
+        fprintf(yyout, "    M=M+1\n");
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");
         
-        if (!strcmp(vartype, "gbl"))
-        {
-            // use the global name directly
-            fprintf(yyout, "    @SP\n");                // copy TOS to D
-            fprintf(yyout, "    A=M\n");
-            fprintf(yyout, "    D=M\n");
-            GenAccessVar(vartype, offset, globalName);  // write D to global address
-	        fprintf(yyout, "    M=D\n");	    
-        }
-        else
-        {
-            GenAccessVar(vartype, offset, globalName);  // get the var _address_
-            fprintf(yyout, "    D=A\n");        
-            fprintf(yyout, "    @SP\n");                // push the var address (<segment addr>+<index>)
-            fprintf(yyout, "    M=M+1\n");
-            fprintf(yyout, "    A=M\n");
-            fprintf(yyout, "    M=D\n");
-            
-            fprintf(yyout, "    @SP\n");                // load D with the TOS-1 value
-            fprintf(yyout, "    A=M\n");
-            fprintf(yyout, "    A=A-1\n");
-            fprintf(yyout, "    D=M\n");
-            fprintf(yyout, "    @SP\n");                // pop the ea
-            fprintf(yyout, "    M=M-1\n");              //   [SP] = <segment addr>+<index>
-            fprintf(yyout, "    A=M+1\n");              //   ea = [<segment addr>+<index>]
-            fprintf(yyout, "    A=M\n");                // write the value to the ea
-            fprintf(yyout, "    M=D\n");
-        }
+        fprintf(yyout, "    @SP\n");                    // load D with the TOS-1 value
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    A=A-1\n");
+        fprintf(yyout, "    D=M\n");
+        fprintf(yyout, "    @SP\n");                    // pop the ea
+        fprintf(yyout, "    M=M-1\n");                  //   [SP] = <segment addr>+<index>
+        fprintf(yyout, "    A=M+1\n");                  //   ea = [<segment addr>+<index>]
+        fprintf(yyout, "    A=M\n");                    // write the value to the ea
+        fprintf(yyout, "    M=D\n");
     }
     else if (!strcmp(op, OP_INC))
     {
@@ -309,8 +305,23 @@ void GenDirect(const char *op, const char *vartype, int offset, const char *glob
         
         GenAccessVar(vartype, offset, globalName);
         fprintf(yyout, "    M=M+1\n");                  // increment the var
-        fprintf(yyout, "    @SP\n");                    // dummy push to accomodate the parser's insisting on a pop after inc
-        fprintf(yyout, "    M=M+1\n");
+        fprintf(yyout, "    D=M\n");                    // push the var
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");               
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");
+    }
+    else if (!strcmp(op, OP_POST_INC))
+    {
+        fprintf(yyout, "\n// inc\n");
+        
+        GenAccessVar(vartype, offset, globalName);
+        fprintf(yyout, "    M=M+1\n");                  // increment the var
+        fprintf(yyout, "    D=M\n");                    // push the incremented var - 1
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");               
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D-1\n");
     }
     else if (!strcmp(op, OP_DEC))
     {
@@ -318,12 +329,120 @@ void GenDirect(const char *op, const char *vartype, int offset, const char *glob
        
         GenAccessVar(vartype, offset, globalName);
         fprintf(yyout, "    M=M-1\n");                  // decrement the var
-        fprintf(yyout, "    @SP\n");                    // dummy push to accomodate the parser's insisting on a pop after inc
-        fprintf(yyout, "    M=M+1\n");
+        fprintf(yyout, "    D=M\n");                    // push the var
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");               
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");
+    }
+    else if (!strcmp(op, OP_POST_DEC))
+    {
+        fprintf(yyout, "\n// dec\n");
+       
+        GenAccessVar(vartype, offset, globalName);
+        fprintf(yyout, "    M=M-1\n");                  // decrement the var
+        fprintf(yyout, "    D=M\n");                    // push the decremented var + 1
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");               
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D+1\n");
     }
 }
 
-// FIXME: break these up into their own functions
+void GenIndirect(const char *op, const char *vartype, int offset, const char *globalName, int is_rhs)
+{
+    if (!strcmp(op, OP_LOAD))
+    {
+        fprintf(yyout, "\n// load indirect\n");
+
+        // replace the index at TOS with the base address + index   
+        GenAccessVar(vartype, offset, globalName);      // get the base address
+        if (!strcmp(vartype, "par"))
+        {
+            fprintf(yyout, "    D=M\n");                // stash the base address indirectly into D
+        }
+        else
+        {
+            fprintf(yyout, "    D=A\n");                // stash the base address directly into D
+        }
+        fprintf(yyout, "    @SP\n");                    // add the base address to the index at TOS
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=M+D\n");
+        if (is_rhs)
+        {
+            fprintf(yyout, "    A=M\n");                // dereference the EA to get the actual value
+            fprintf(yyout, "    D=M\n");
+            fprintf(yyout, "    @SP\n");                // replace the address at TOS with the value at the address
+            fprintf(yyout, "    A=M\n");
+            fprintf(yyout, "    M=D\n");
+        }
+    }
+    else if (!strcmp(op, OP_STORE))
+    {
+        fprintf(yyout, "\n// store indirect\n");
+
+        // store the value at TOS to the address at TOS-1
+        fprintf(yyout, "    @SP\n");                    // pop the value
+        fprintf(yyout, "    M=M-1\n");
+        fprintf(yyout, "    A=M+1\n");
+        fprintf(yyout, "    D=M\n");
+        fprintf(yyout, "    @SP\n");                    // get the address at TOS
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");                    // store the value at the address
+    }
+}
+
+void GenPointer(const char *op, const char *vartype, int offset, const char *globalName, int is_rhs)
+{
+    if (!strcmp(op, OP_LOAD))
+    {
+        fprintf(yyout, "\n// load pointer\n");
+
+        // push the contents of the pointer
+        GenAccessVar(vartype, offset, globalName);      // get the pointer
+        if (is_rhs)
+        {
+            fprintf(yyout, "    A=M\n");                // dereference the EA to get the actual value
+        }
+        fprintf(yyout, "    D=M\n");                    // push the pointer/actual value
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");
+    }
+    else if (!strcmp(op, OP_STORE))
+    {
+        fprintf(yyout, "\n// store indirect\n");
+
+        // store the value at TOS to the address at TOS-1
+        fprintf(yyout, "    @SP\n");                    // pop the value
+        fprintf(yyout, "    M=M-1\n");
+        fprintf(yyout, "    A=M+1\n");
+        fprintf(yyout, "    D=M\n");
+        fprintf(yyout, "    @SP\n");                    // get the address at TOS
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");                    // store the value at the address
+    }
+}
+
+void GenReference(const char *op, const char *vartype, int offset, const char *globalName)
+{
+    if (!strcmp(op, OP_LOAD))
+    {
+        fprintf(yyout, "\n// load reference\n");
+                     
+        GenAccessVar(vartype, offset, globalName);      // get the base address
+        fprintf(yyout, "    D=A\n");                    // push the base address
+        fprintf(yyout, "    @SP\n");
+        fprintf(yyout, "    M=M+1\n");               
+        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    M=D\n");
+    }
+}
+
+// TODO: break these up into their own functions
 void GenPopRet(const char *op, const char *comment)
 {
     if (!strcmp(op, OP_POP))
@@ -370,8 +489,9 @@ void GenJump(const char *op, const char *label, const char *comment)
     {
         fprintf(yyout, "\n// jumpz\t%s\n", comment);
         
-        fprintf(yyout, "    @SP\n");
-        fprintf(yyout, "    A=M\n");
+        fprintf(yyout, "    @SP\n");                // pop the logical value and jump if it's a false, i.e. zero
+        fprintf(yyout, "    M=M-1\n");
+        fprintf(yyout, "    A=M+1\n");
         fprintf(yyout, "    D=M\n");
         fprintf(yyout, "    @%s\n", label);
         fprintf(yyout, "    D;JEQ\n");

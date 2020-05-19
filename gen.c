@@ -191,8 +191,43 @@ void gen_direct(const char *op, const char *mod, int val, const char *comment)
     }
     else
     {
-        // FIXME: this needs a better solution like making PP and MM to not be expressions?
         GenDirect(op, mod, val, comment);
+    }
+}
+
+void gen_indirect(const char *op, const char *mod, int val, const char *comment, int is_rhs)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%si\t%s\t%d\t;\t%s\n", op, mod, val, comment);
+    }
+    else
+    {
+        GenIndirect(op, mod, val, comment, is_rhs);
+    }
+}
+
+void gen_pointer(const char *op, const char *mod, int val, const char *comment, int is_rhs)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%sp\t%s\t%d\t;\t%s\n", op, mod, val, comment);
+    }
+    else
+    {
+        GenPointer(op, mod, val, comment, is_rhs);
+    }
+}
+
+void gen_reference(const char *op, const char *mod, int val, const char *comment)
+{
+    if (emitVmCode)
+    {
+        fprintf(yyout, "\t%sr\t%s\t%d\t;\t%s\n", op, mod, val, comment);
+    }
+    else
+    {
+        GenReference(op, mod, val, comment);
     }
 }
 

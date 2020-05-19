@@ -1,7 +1,6 @@
-main()
+void main()
 {
-    int x;
-    x = 1;
-    x++;
+    int x = 1;
+    ++x;
 }
 

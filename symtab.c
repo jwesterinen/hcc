@@ -24,6 +24,9 @@ int g_offset = 1,           // offset in global region
     l_offset = 0,           // offset in local region
     l_max;                  // size of local region
     
+// reference level
+int ref_level = 0;    
+    
 // void flag
 int is_void = 0;    
 
@@ -174,7 +177,7 @@ struct Symtab *link_parm(int type, struct Symtab *symbol, struct Symtab *next)
     return symbol;
 }
 
-static struct Symtab *make_var(struct Symtab *symbol)
+static struct Symtab *make_var(struct Symtab *symbol, int size, int refLevel)
 {
     switch (symbol->s_type)
     {
@@ -196,11 +199,17 @@ static struct Symtab *make_var(struct Symtab *symbol)
     }
     symbol->s_type = VAR;
     symbol->s_blknum = blknum;
+    
+    // size = 0 for scalars or = number of elements in an array
+    symbol->s_size = size;
+    
+    // refLevel = 0 for scalars or the number of pointer level deep, e.g. int *x, **y, ****z;
+    symbol->s_ref_level = refLevel;
 
     return symbol;
 }
 
-struct Symtab *make_func(int returnQty, struct Symtab *symbol)
+struct Symtab *make_func(struct Symtab *symbol, int returnQty)
 {
     switch (symbol->s_type)
     {
@@ -210,6 +219,7 @@ struct Symtab *make_func(int returnQty, struct Symtab *symbol)
         case VAR:
             error("function name %s same as global variable", symbol->s_name);
             return symbol;
+        case VFUNC:
         case FUNC:
             error("duplicate function definition %s", symbol->s_name);
             return symbol;
@@ -245,7 +255,7 @@ int parm_default(struct Symtab *symbol)
     return count;        
 }
 
-void chk_var(struct Symtab *symbol)
+int chk_var(struct Symtab *symbol)
 {
     switch (symbol->s_type)
     {
@@ -260,12 +270,14 @@ void chk_var(struct Symtab *symbol)
         case UFUNC:
             error("function %s used as variable", symbol->s_name);
         case VAR:
-            return;
+            return symbol->s_size;
         default:
             bug("check_var");
     }
     symbol->s_type = VAR;
     symbol->s_blknum = blknum;
+    
+    return symbol->s_size;
 }
 
 void chk_func(struct Symtab *symbol)
@@ -301,19 +313,23 @@ void all_program()
 #endif
 }
 
-void all_var(struct Symtab *symbol)
+void all_var(struct Symtab *symbol, int size, int refLevel)
 {
-    symbol = make_var(symbol);
+    symbol = make_var(symbol, size, refLevel);
     
     // if not in parameter region assign sutable offsets
     switch (symbol->s_blknum)
     {
         default:
-            symbol->s_offset = l_offset++;
+            //symbol->s_offset = l_offset++;
+            symbol->s_offset = l_offset;
+            l_offset += (symbol->s_size == 0) ? 1 : symbol->s_size;
         case 2:
             break;
         case 1:
-            symbol->s_offset = g_offset++;
+            //symbol->s_offset = g_offset++;
+            symbol->s_offset = g_offset;
+            g_offset += (symbol->s_size == 0) ? 1 : symbol->s_size;
             break;
         case 0:
             bug("all_var");

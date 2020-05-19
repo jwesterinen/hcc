@@ -5,6 +5,8 @@
  */
 
 %{
+#include <stdio.h>
+#include <stdlib.h>
 #include "error.h"
 #include "symtab.h"
 #include "gen.h"
@@ -12,6 +14,9 @@ int yylex(void);
 
 #define OFFSET(x)   (((struct Symtab *)x)->s_offset)
 #define NAME(x)     (((struct Symtab *)x)->s_name)
+#define TYPE(x)     (((struct Symtab *)x)->s_type)
+
+int is_void_expr = 0;
 %}
 
 /*
@@ -49,6 +54,7 @@ int yylex(void);
 %token  '*'
 %token  '/'
 %token  '%'
+%token  '~'
 %token  '>'
 %token  '<'
 %token  GE
@@ -72,8 +78,8 @@ int yylex(void);
  *	typed non-terminal symbols
  */
 
-%type   <y_sym> function_definition function_declaration optional_parameter_list parameter_list
-%type   <y_num> parameter_type optional_argument_list argument_list
+%type   <y_sym> function_definition function_declaration optional_parameter_list parameter_list array_lhs_spec pointer_lhs_spec binary
+%type   <y_num> parameter_type argument_list pointer
 %type   <y_lab> if_prefix loop_prefix
 
 /*
@@ -132,7 +138,7 @@ function_definition
 function_declaration
 	: INT Identifier '(' 
 	    {
-	        make_func(1, $2);
+	        make_func($2, 1);
 	        blk_push();
 	    }
 	  optional_parameter_list rp/*)*/
@@ -143,7 +149,7 @@ function_declaration
 	    } 
 	| VOID Identifier '(' 
 	    {
-	        make_func(0, $2);
+	        make_func($2, 0);
 	        blk_push();
 	    }
 	  optional_parameter_list rp/*)*/
@@ -163,6 +169,10 @@ optional_parameter_list
 
 parameter_list
     : parameter_type Identifier
+        {
+            $$ = link_parm($1, $2, (struct Symtab *)0);
+        }
+    | parameter_type Identifier '[' rb
         {
             $$ = link_parm($1, $2, (struct Symtab *)0);
         }
@@ -226,7 +236,7 @@ declaration
 	    {
 	        blk_pop();
 	    }
-	
+
 declarator_list
 	: declarator
 	| declarator_list ',' declarator
@@ -242,17 +252,47 @@ declarator_list
 	| declarator_list ',' error
 
 declarator
+	: direct_declarator
+	| pointer_declarator
+
+direct_declarator
     : Identifier
         {
-            all_var($1);
+            all_var($1, 0, 0);
         }
     | Identifier '=' initializer
         {
-            all_var($1);
+            all_var($1, 0, 0);
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	        gen_pr(OP_POP, "clear stack");
         }
+    | Identifier '[' Constant rb
+        {
+            all_var($1, atoi($3), 0);
+        }
 
+pointer_declarator
+    : pointer Identifier
+        {
+            all_var($2, 0, $1);
+        }
+    | pointer Identifier '=' initializer
+        {
+            all_var($2, 0, $1);
+	        gen_direct(OP_STORE, gen_mod($2), OFFSET($2), NAME($2));
+	        gen_pr(OP_POP, "clear stack");
+        }
+
+pointer
+    : '*'
+        {
+            $<y_num>$ = 1;
+        }
+    | '*' pointer	
+        {
+            $<y_num>$++;
+        }
+    
 initializer
     : Constant
 	    {
@@ -270,10 +310,14 @@ statements
 statement
 	: expression sc/*';'*/
 	    {
-	        if (!is_void)
+	        if (!is_void_expr)
+	        {
 	            gen_pr(OP_POP, "clear stack");
+	        }
 	        else
-	            is_void = 0;
+	        {
+	            is_void_expr = 0;
+	        }
 	    }
 	| sc/*';'*/  /* null statement */
 	| BREAK sc/*';'*/
@@ -348,17 +392,71 @@ expression
 binary
 	: Identifier
 	    { 
-	        chk_var($1);
-	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        if (chk_var($1) == 0)
+	        {
+	            // scalar
+	            gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
+	        }
+	        else
+	        {
+	            // array
+	            char comment[80];
+	            sprintf(comment, "&%s",  NAME($1));
+	            gen_reference(OP_LOAD, gen_mod($1), OFFSET($1), comment);
+	        }
 	    }
 	| Constant
-	    {gen_load_immed($1);}
+	    {
+	        gen_load_immed($1);
+	    }
 	| '(' expression rp/*')'*/
+	    {$$ = $<y_sym>1;}
 	| '(' error rp/*')'*/
+	    {$$ = $<y_sym>1;}
+	| Identifier '(' rp/*')'*/
+	    {
+	        gen_call($1, 0);
+	        if (TYPE($1) == VFUNC)
+	        {
+	            is_void_expr = 1;
+	        }
+	    }
 	| Identifier '(' 
-	    {chk_func($1);}
-	  optional_argument_list rp/*')'*/
-	    {gen_call($1, $4);}
+	    {
+	        chk_func($1);
+	    }
+	  argument_list rp/*')'*/
+	    {
+	        gen_call($1, $4);
+	        if (TYPE($1) == VFUNC)
+	        {
+	            is_void_expr = 1;
+	        }
+	    }
+	| Identifier '[' binary rb/*']'*/
+	    {
+	        // array as a RHS
+	        char name[80];
+	        sprintf(name, "%s[]",  NAME($1));
+	        chk_var($1);
+	        gen_indirect(OP_LOAD, gen_mod($1), OFFSET($1), name, 1);
+	    }
+	| '&' Identifier
+	    {
+	        // address op as a RHS
+	        char name[80];
+	        sprintf(name, "&%s",  NAME($2));
+	        chk_var($2);
+	        gen_reference(OP_LOAD, gen_mod($2), OFFSET($2), name);
+	    }
+	| '*' Identifier
+	    {
+	        // indirection op as a RHS
+	        char name[80];
+	        sprintf(name, "*%s",  NAME($2));
+	        chk_var($2);
+	        gen_pointer(OP_LOAD, gen_mod($2), OFFSET($2), name, 1);
+	    }
 	| PP Identifier
 	    {
 	        chk_var($2);
@@ -370,37 +468,81 @@ binary
 	        gen_direct(OP_DEC, gen_mod($2), OFFSET($2), NAME($2));
 	    }
 	| binary '+' binary
-	    {gen_alu(ALU_ADD, "+");}
+	    {
+	        gen_alu(ALU_ADD, "+");
+	    }
 	| binary '-' binary
-	    {gen_alu(ALU_SUB, "-");}
+	    {
+	        gen_alu(ALU_SUB, "-");
+	    }
 	| binary '*' binary
-	    {gen_alu(ALU_MUL, "*");}
+	    {
+	        gen_alu(ALU_MUL, "*");
+	    }
 	| binary '/' binary
-	    {gen_alu(ALU_DIV, "/");}
+	    {
+	        gen_alu(ALU_DIV, "/");
+	    }
 	| binary '%' binary
-	    {gen_alu(ALU_MOD, "%");}
+	    {
+	        gen_alu(ALU_MOD, "%");
+	    }
 	| binary '>' binary
-	    {gen_alu(ALU_GT, ">");}
+	    {
+	        gen_alu(ALU_GT, ">");
+	    }
 	| binary '<' binary
-	    {gen_alu(ALU_LT, "<");}
+	    {
+	        gen_alu(ALU_LT, "<");
+	    }
 	| binary GE binary
-	    {gen_alu(ALU_GE, ">=");}
+	    {
+	        gen_alu(ALU_GE, ">=");
+	    }
 	| binary LE binary
-	    {gen_alu(ALU_LE, "<=");}
+	    {
+	        gen_alu(ALU_LE, "<=");
+	    }
 	| binary EQ binary
-	    {gen_alu(ALU_EQ, "==");}
+	    {
+	        gen_alu(ALU_EQ, "==");
+	    }
 	| binary NE binary
-	    {gen_alu(ALU_NE, "!=");}
+	    {
+	        gen_alu(ALU_NE, "!=");
+	    }
 	| binary '&' binary
-	    {gen_alu(ALU_AND, "&");}
+	    {
+	        gen_alu(ALU_AND, "&");
+	    }
 	| binary '|' binary
-	    {gen_alu(ALU_OR, "|");}
+	    {
+	        gen_alu(ALU_OR, "|");
+	    }
 	| binary '^' binary
-	    {gen_alu(ALU_XOR, "^");}
+	    {
+	        gen_alu(ALU_XOR, "^");
+	    }
 	| Identifier '=' binary
 	    { 
 	        chk_var($1); 
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
+	    }
+	| array_lhs_spec '=' binary
+	    {
+	        // array as a LHS 
+	        char name[80];
+	        sprintf(name, "%s[]",  NAME($1));
+	        chk_var($1); 
+	        gen_indirect(OP_STORE, gen_mod($1), OFFSET($1), name, 0);
+	    }
+	| pointer_lhs_spec '=' binary
+	    {
+	        // pointer as a LHS 
+	        char name[80];
+	        sprintf(name, "*%s",  NAME($1));
+	        chk_var($1); 
+	        gen_pointer(OP_STORE, gen_mod($1), OFFSET($1), name, 0);
 	    }
 	| Identifier PE
 	    { 
@@ -453,12 +595,6 @@ binary
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
 
-optional_argument_list
-	: /* no actual arguments */
-	    {$$ = 0;}
-	| argument_list
-	    /* default action, $$ = $1, = # of actual arguments */
-
 argument_list
 	: binary
 	    {$$ = 1;}
@@ -471,7 +607,25 @@ argument_list
 	    {$$ = 0;}
 	| argument_list error
 	| argument_list ',' error
-	    
+
+array_lhs_spec
+    : Identifier '[' binary ']'
+        {
+	        char name[80];
+	        chk_var($1); 
+            sprintf(name, "%s[]",  NAME($1));
+            gen_indirect(OP_LOAD, gen_mod($1), OFFSET($1), name, 0);
+	    }
+
+pointer_lhs_spec
+	: '*' Identifier
+	    {
+	        $$ = $2;
+	        char name[80];
+	        sprintf(name, "*%s",  NAME($2));
+	        chk_var($2); 
+	        gen_pointer(OP_LOAD, gen_mod($2), OFFSET($2), name, 0);
+	    }
 /*
  *  make certain terminal symbols very important
  */
@@ -479,4 +633,5 @@ argument_list
 rp  : ')'   {yyerrok;}	    
 sc  : ';'   {yyerrok;}	    
 rr  : '}'   {yyerrok;}	    
+rb  : ']'   {yyerrok;}	    
 
