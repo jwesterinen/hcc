@@ -54,16 +54,19 @@
 #define KEYCODE_MASK        15
 
 // expression stack
+#define ExprPush(n)     exprStack[++tos] = (n)
+#define ExprPop()       exprStack[tos];     \
+                        if (tos) --tos;
+#define ExprTop()       exprStack[tos]
+#define ExprPut(n)      exprStack[tos] = (n)
 int exprStack[20];
 int tos = 0;
 
-int isNewEntry;
-int keycode;
-int a, b;
-
 void main()
 {
-    isNewEntry = 1;
+    int keycode;
+    int b;
+    int isNewEntry = 1;
     
     ClearDisplay();
     
@@ -84,7 +87,9 @@ void main()
         {
             // rotate a new digit into the display
             if (isNewEntry)
+            {
                 ClearDisplay();
+            }
             isNewEntry = 0;
             AppendNum3(keycode & KEYCODE_MASK);
         }
@@ -98,7 +103,8 @@ void main()
             if (keycode == KEYCODE_PLUS)
             {
                 // add: TOS = a + b
-                ExprPut(ExprPop() + ExprTop());
+                b = ExprPop();
+                ExprPut(ExprTop() + b);
             }
             else if (keycode == KEYCODE_MINUS)
             {
@@ -109,7 +115,8 @@ void main()
             else if (keycode == KEYCODE_MULTIPLY)
             {
                 // mul: TOS = a * b
-                ExprPut(ExprPop() * ExprTop());
+                b = ExprPop();
+                ExprPut(ExprTop() * b);
             }
             else if (keycode == KEYCODE_DIVIDE)
             {

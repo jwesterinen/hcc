@@ -153,7 +153,7 @@ struct Symtab *s_find(const char *name)
     return (struct Symtab *)NULL;
 }
 
-struct Symtab *link_parm(int type, struct Symtab *symbol, struct Symtab *next)
+struct Symtab *link_parm(struct Symtab *symbol, struct Symtab *next)
 {
     switch (symbol->s_type)
     {

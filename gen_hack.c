@@ -101,7 +101,6 @@ void GenAlu(const char *mod, const char *comment)
 {
     fprintf(yyout, "\n// alu, %s, %s\n", mod, comment);
     
-	//if (mod == "+" || mod == "-" || mod == "&" || mod == "|")
 	if (!strcmp(mod, "+") || !strcmp(mod, "-") || !strcmp(mod, "&") || !strcmp(mod, "|"))
 	{
 		fprintf(yyout, "    @SP\n");             // pop y
@@ -145,21 +144,20 @@ void GenAlu(const char *mod, const char *comment)
 	    fprintf(yyout, "    A=M\n");
 	    fprintf(yyout, "    M=D\n");
     }
-#ifdef NEG_AND_NOT_IMPLMENTED_IN_THE_PARSER	
-	else if (!strcmp(mod, "neg") || !strcmp(mod, "not\n"));
-	{
-		fprintf(yyout, "    @SP\n");		    // pop y
+	else if (!strcmp(mod, "!"))
+	{		    
+	    // check for TOS==0, if so set TOS=1, else TOS=0
+		fprintf(yyout, "    @SP\n");                // put TOS into D
 		fprintf(yyout, "    A=M\n");
-		if (!strcmp(mod, "neg"))
-		{
-			fprintf(yyout, "    M=-M\n");	    // [sp-1] = -y
-		}
-		else if (!strcmp(mod, "not\n"))
-		{
-			fprintf(yyout, "    M=!M\n");	    // [sp-1] = !y
-		}
+		fprintf(yyout, "    D=M\n");
+		fprintf(yyout, "    M=0\n");                // load TOS with 0 (false)
+		fprintf(yyout, "    @LT%d\n", ++labelId);   // if D==0 load TOS with 1 (true)
+		fprintf(yyout, "    D;JNE\n");
+		fprintf(yyout, "    @SP\n");
+		fprintf(yyout, "    A=M\n");
+		fprintf(yyout, "    M=1\n");
+		fprintf(yyout, "(LT%d)\n", labelId);
 	}
-#endif
 	else if (!strcmp(mod, "==") || !strcmp(mod, "!=") || !strcmp(mod, ">") || !strcmp(mod, ">=") || 
 	         !strcmp(mod, "<") || !strcmp(mod, "<="))
 	{

@@ -78,8 +78,8 @@ int is_void_expr = 0;
  *	typed non-terminal symbols
  */
 
-%type   <y_sym> function_definition function_declaration optional_parameter_list parameter_list array_lhs_spec pointer_lhs_spec binary
-%type   <y_num> parameter_type argument_list pointer
+%type   <y_sym> function_definition function_declaration optional_parameter_list parameter_declaration_list parameter_declaration parameter_declarator array_lhs_spec pointer_lhs_spec binary
+%type   <y_num> argument_list pointer
 %type   <y_lab> if_prefix loop_prefix
 
 /*
@@ -164,49 +164,66 @@ optional_parameter_list
 	    {
 	        $$ = 0;
 	    }
-	| parameter_list
+	| parameter_declaration_list
 	    /* $$ = $1 = chain of formal parameters */
 
-parameter_list
-    : parameter_type Identifier
+parameter_declaration_list
+	: parameter_declaration
         {
-            $$ = link_parm($1, $2, (struct Symtab *)0);
+            $$ = link_parm($1, 0);
         }
-    | parameter_type Identifier '[' rb
+	| parameter_declaration_list ',' parameter_declaration
         {
-            $$ = link_parm($1, $2, (struct Symtab *)0);
-        }
-    | parameter_type Identifier ',' parameter_list
-        {
-            $$ = link_parm($1, $2, $4);
+            $$ = link_parm($3, $1);
             yyerrok;
         }
     | error
         {
             $$ = 0;
         }
-    | error parameter_list
+    | error parameter_declaration_list
         {
             $$ = $2;
         }
-    | parameter_type Identifier error parameter_list
+	| parameter_declaration error parameter_declaration_list
         {
-            $$ = link_parm($1, $2, $4);
-            yyerrok;
+            $$ = link_parm($1, $3);
         }
-    | error ',' parameter_list
+	| error ',' parameter_declaration_list
         {
             $$ = $3;
             yyerrok;
         }
-        
-parameter_type
-    : /* none */
-        {$$ = 0;}
-    | INT  
-        {$$ = 0;}
-    | INT '*'    
-        {$$ = 1;}  
+
+parameter_declaration
+	: type_specifier parameter_declarator
+	    {
+	        $$ = $<y_sym>2;
+	    }
+
+type_specifier
+	: VOID
+	| INT
+
+parameter_declarator
+	: pointer parameter_direct_declarator
+	    {
+	        $$ = $<y_sym>2;
+	    }
+	| parameter_direct_declarator
+	    {
+	        $$ = $<y_sym>1;
+	    }
+
+parameter_direct_declarator
+    : Identifier
+        {
+            all_var($1, 0, 0);
+        }
+    | Identifier '[' rb/*']'*/
+        {
+            all_var($1, 0, 0);
+        }
     
 compound_statement
 	: '{' 
@@ -390,7 +407,7 @@ expression
 	| expression ',' error
 
 binary
-	: Identifier
+    : Identifier
 	    { 
 	        if (chk_var($1) == 0)
 	        {
@@ -466,6 +483,11 @@ binary
 	    {
 	        chk_var($2);
 	        gen_direct(OP_DEC, gen_mod($2), OFFSET($2), NAME($2));
+	    }
+	| '!' binary
+	    {
+	        chk_var($2);
+	        gen_alu(ALU_NOT, "!");
 	    }
 	| binary '+' binary
 	    {
@@ -612,8 +634,8 @@ array_lhs_spec
     : Identifier '[' binary ']'
         {
 	        char name[80];
-	        chk_var($1); 
             sprintf(name, "%s[]",  NAME($1));
+	        chk_var($1); 
             gen_indirect(OP_LOAD, gen_mod($1), OFFSET($1), name, 0);
 	    }
 

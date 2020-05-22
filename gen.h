@@ -30,7 +30,6 @@
 // OP_ALU binary op modifiers
 #define ALU_ADD     "+"         // addition
 #define ALU_SUB     "-"         // subtract
-#define ALU_NEG     "-"         // negate
 #define ALU_MUL     "*"         // multiplication
 #define ALU_DIV     "/"         // division
 #define ALU_MOD     "%"         // remainder
@@ -40,11 +39,14 @@
 #define ALU_GE      ">="        //             >=
 #define ALU_EQ      "=="        //             ==
 #define ALU_NE      "!="        //             !=
-#define ALU_NOT     "!"         // logical inversion
 #define ALU_AND     "&"         // bitwise and
 #define ALU_OR      "|"         // bitwise or
 #define ALU_XOR     "^"         // bitwise xor  
+
+// OP_ALU unary op modifiers
 #define ALU_INV     "~"         // bitwise inversion
+#define ALU_NEG     "neg"       // negate (-)
+#define ALU_NOT     "!"         // logical inversion (!)
 
 void gen_begin_prog();
 void gen_end_prog();

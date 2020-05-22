@@ -3,9 +3,9 @@
 int b[5];
 int n;
 
-void foo(int n[])
+void foo(int n[], int* s, int val)
 {
-    n[3] = 8;
+    n[*s] = val;
 }
 
 void main()
@@ -13,6 +13,9 @@ void main()
     int a[5];
     int x;
 
-    foo(a);   // local array parameter
-    foo(b);   // global array parameter    
+    x = 2;
+    foo(a, &x, 5);   // local array parameter
+    
+    n = 3;
+    foo(b, &n, 6);   // global array parameter    
 }
