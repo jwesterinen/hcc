@@ -1,7 +1,7 @@
-base ?= 
-TARGET = $(base).hack
+app ?= 
+TARGET = $(app).hack
 
-OBJ = $(base).hasm
+OBJ = $(app).hasm
 
 %.hasm: %.c
 	hcc $<
@@ -17,7 +17,7 @@ clean:
 	rm -f $(TARGET) *.hasm *.ho
 
 install:
-	cp $(TARGET) ../hack
+	cp $(TARGET) ../../hack
 
 .PHONY: clean install uninstall
 	

@@ -1,6 +1,6 @@
 int g;
 
-void main(a)
+void main(int a)
 {
     int x,y;
     
