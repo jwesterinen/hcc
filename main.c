@@ -130,9 +130,10 @@ int main(int argc, char** argv)
     //yyerfp = stdout;
     yyerfp = stderr;
 
+#undef YYDEBUG
 #ifdef YYDEBUG
     extern int yydebug;
-    //yydebug = 1;
+    yydebug = 1;
 #endif
 
     // for now cpp will always be called

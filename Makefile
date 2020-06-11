@@ -5,6 +5,7 @@ INST_BIN_DIR = $(PREFIX)/bin
 INST_LIB_DIR = $(PREFIX)/lib
 
 #DEFINES = -DYYDEBUG -DTRACE
+#DEFINES = -DTRACE
 
 CFLAGS = -O0 -g -Wall -c
 LIBS = -ll
@@ -17,7 +18,7 @@ all: $(TARGET)
 $(TARGET): lex.yy.c y.tab.c y.tab.h $(OBJECTS)
 	cc $(OBJECTS) $(LIBS) -o $@
 
-$(OBJ)/%.o: $(SRC)/%.cpp $(HEADERS)
+%.o: %.c $(HEADERS)
 	cc $(DEFINES) $(CFLAGS) -o $@ $<
 
 lex.yy.c: $(TARGET).l y.tab.h
