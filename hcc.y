@@ -586,7 +586,7 @@ binary
 	        gen_alu(ALU_SUB, "-");
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
-	| Identifier TE binary
+	| Identifier TE
 	    { 
 	        chk_var($1); 
 	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
@@ -596,7 +596,7 @@ binary
 	        gen_alu(ALU_MUL, "*");
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
-	| Identifier DE binary
+	| Identifier DE
 	    { 
 	        chk_var($1); 
 	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
@@ -606,7 +606,7 @@ binary
 	        gen_alu(ALU_DIV, "/");
 	        gen_direct(OP_STORE, gen_mod($1), OFFSET($1), NAME($1));
 	    }
-	| Identifier RE binary
+	| Identifier RE
 	    { 
 	        chk_var($1); 
 	        gen_direct(OP_LOAD, gen_mod($1), OFFSET($1), NAME($1));
